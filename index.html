@@ -13,8 +13,34 @@
   width: 960px;
 }
 
-h1 {
+.realtitle {
+  position: absolute;
+  top: -5px;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  text-align: center;
+  width: 960px;
+  font-size: 17px;
+  color: #4099FF;
+  font-weight:bold;
+}
+
+.inner-title {
   font-size: 18px;
+  color: #fff;
+}
+
+.twitter-logo-a {
+  top:  40px;
+  left: 0px;
+}
+
+.twitter-logo-b {
+  position: absolute;
+  top: -17px;
+  left: 635px;
+}
+
+h1 {
 }
 
 .tweet {
@@ -22,6 +48,12 @@ h1 {
   left: 240px;
   width: 480px;
   text-align: center;
+}
+
+.github-mark {
+  position: absolute;
+  left: 45px;
+  top: 25px;
 }
 
 .github {
@@ -32,19 +64,57 @@ h1 {
 
 a {
   text-decoration: none;
+  font-family: "Helvetica Neue", Roboto, "Segoe UI", Calibri, sans-serif;
+}
+
+blockquote.twitter-tweet {
+  display: inline-block;
+  font-family: "Helvetica Neue", Roboto, "Segoe UI", Calibri, sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 16px;
+  border-color: #eee #ddd #bbb;
+  border-radius: 5px;
+  border-style: solid;
+  border-width: 1px;
+  box-shadow: 0 1px 3px rgba(57, 162, 190, 0.94);
+  background-color: rgba(57, 162, 190, 0.94);
+  margin: 10px 5px;
+  padding: 0 16px 16px 16px;
+  max-width: 468px;
+}
+
+blockquote.twitter-tweet p {
+  font-size: 16px;
+  font-weight: normal;
+  line-height: 20px;
+}
+
+blockquote.twitter-tweet a {
+  color: inherit;
+  font-weight: normal;
+  font-family: "Helvetica Neue", Roboto, "Segoe UI", Calibri, sans-serif;
+  text-decoration: none;
+  outline: 0 none;
+}
+
+blockquote.twitter-tweet a:hover,
+blockquote.twitter-tweet a:focus {
+  text-decoration: underline;
 }
 
 </style>
+<a class="github-mark" href="https://github.com/p-cherukuri/nod3-streams"><img src="GitHub-Mark-64px.png"></a>
 <a class="github" href="https://github.com/p-cherukuri">@p-cherukuri</a>
+<h1 class="realtitle">Tweeting Around The World</h1>
 <div class="title">
-  <h1>Tweeting Around The World</h1>
   <p>Tweets should start showing on a globe soon.
     If it doesn't show up quickly, there's most likely a problem with the server. Sorry!</p>
 </div>
 <script src="//d3js.org/d3.v3.min.js"></script>
 <script src="//d3js.org/queue.v1.min.js"></script>
 <script src="//d3js.org/topojson.v1.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.jss"></script>
+<script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
 <script>
   var width = 960,
       height = 960;
@@ -81,16 +151,18 @@ a {
 
   // Open a socket to website.
   var socket = io({ "force new connection" : true });
-
+  // Function to render embedded tweet
   // TODO - make this look better.
   function makeHTML(tweet) {
     return [
-      '<div class="user">',
-      '<a href="https://twitter.com/', tweet.user, '" target="_blank">', '@', tweet.user, '</a>',
-      '<h1>', tweet.placeName, '</h1>',
-      '<div class="tweet">',
+      '<blockquote class="twitter-tweet">',
+
+      '<h1 class="inner-title">', '<img class="twitter-logo-a" src="twitter-512.gif" width="30" height="30">', tweet.placeName, '</h1>',
       '<a href="https://twitter.com/', tweet.user, '/status/', tweet.id, '" target="_blank">',
-      tweet.text, '</a>', '</div>'
+      tweet.text, '<br />','<br />', '</a>',
+        '<a href="https://twitter.com/', tweet.user, '" target="_blank">', '<b>','- ', '@', tweet.user,'</b>', '</a>',
+       '</blockquote>',
+      '<script async src="https://platform.twitter.com/widgets.js', '"charset="utf-8" />',
     ].join('');
   }
 
@@ -110,14 +182,15 @@ a {
          // Erase canvas.
          c.clearRect(0, 0, width, height);
          // Fill in land in gray.
-         c.fillStyle = "#ccc", c.beginPath(), path(land), c.fill();
+         c.fillStyle = "#5fc84e", c.beginPath(), path(land), c.fill();
          // Draw country borders in white.
-         c.strokeStyle = "#fff", c.lineWidth = .5, c.beginPath(), path(borders), c.stroke();
+         c.strokeStyle = "#b5cce7", c.lineWidth = .5, c.beginPath(), path(borders), c.stroke();
          // Draw globe circumference in black.
-         c.strokeStyle = "#000", c.lineWidth = 2, c.beginPath(), path(globe), c.stroke();
+         c.strokeStyle = "#4099FF", c.lineWidth = 2, c.beginPath(), path(globe), c.stroke();
          // Draw a circle at canvas-coordinates of latlong.
+         //c.fillStyle = "#ccc", c.beginPath(), path(globe), c.fill();
          var center = projection(p);
-         c.strokeStyle = "#000", c.fillStyle = "#f00", c.beginPath(), c.arc(center[0], center[1], 5, 0, 2 * Math.PI, false), c.lineWidth = 2, c.fill(), c.stroke();
+         c.strokeStyle = "rgba(57, 162, 190, 0.94)", c.fillStyle = "rgba(6, 135, 168, 1)", c.beginPath(), c.arc(center[0], center[1], 5, 0, 2 * Math.PI, false), c.lineWidth = 2, c.fill(), c.stroke();
         };
       });
     });
