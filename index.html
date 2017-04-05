@@ -1,88 +1,126 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
+<head>
+  <title>Tweeting Around The World</title>
+</head>
 <style>
 
-h1 {
+.title {
   position: absolute;
   top: 500px;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 18px;
   text-align: center;
   width: 960px;
 }
 
+h1 {
+  font-size: 18px;
+}
+
+.tweet {
+  position: absolute;
+  left: 240px;
+  width: 480px;
+  text-align: center;
+}
+
+.github {
+  position: absolute;
+  left: 25px;
+  top: 100px;
+}
+
+a {
+  text-decoration: none;
+}
+
 </style>
-<h1></h1>
+<a class="github" href="https://github.com/p-cherukuri">@p-cherukuri</a>
+<div class="title">
+  <h1>Tweeting Around The World</h1>
+  <p>Tweets should start showing on a globe soon.
+    If it doesn't show up quickly, there's most likely a problem with the server. Sorry!</p>
+</div>
 <script src="//d3js.org/d3.v3.min.js"></script>
 <script src="//d3js.org/queue.v1.min.js"></script>
 <script src="//d3js.org/topojson.v1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.jss"></script>
 <script>
-
-var width = 960,
-    height = 960;
-
-var projection = d3.geo.orthographic()
-    .translate([width / 2, height / 2])
-    .scale(width / 2 - 20)
-    .clipAngle(90)
-    .precision(0.6);
-
-var canvas = d3.select("body").append("canvas")
-    .attr("width", width)
-    .attr("height", height);
-
-var c = canvas.node().getContext("2d");
-
-var path = d3.geo.path()
-    .projection(projection)
-    .context(c);
-
-var title = d3.select("h1");
-
-queue()
-    .defer(d3.json, "/mbostock/raw/4090846/world-110m.json")
-    .defer(d3.tsv, "/mbostock/raw/4090846/world-country-names.tsv")
-    .await(ready);
-
-function ready(error, world, names) {
-  if (error) throw error;
-
-  var globe = {type: "Sphere"},
-      land = topojson.feature(world, world.objects.land),
-      countries = topojson.feature(world, world.objects.countries).features,
-      borders = topojson.mesh(world, world.objects.countries, function(a, b) { return a !== b; }),
-      i = -1,
-      n = countries.length;
-
-  countries = countries.filter(function(d) {
-    return names.some(function(n) {
-      if (d.id == n.id) return d.name = n.name;
-    });
-  }).sort(function(a, b) {
-    return a.name.localeCompare(b.name);
+  var width = 960,
+      height = 960;
+  var projection = d3.geo.orthographic()
+      .translate([width / 2, height / 2])
+      .scale(width / 2 - 20)
+      .clipAngle(90)
+      .precision(0.6);
+  var canvas = d3.select("body").append("canvas")
+      .attr("width", width)
+      .attr("height", height);
+  var c = canvas.node().getContext("2d");
+  var path = d3.geo.path()
+      .projection(projection)
+      .context(c);
+  var title = d3.select(".title");
+  queue()
+      .defer(d3.json, "/world-110m.json")
+      .defer(d3.tsv, "/world-country-names.tsv")
+      .await(ready);
+  function ready(error, world, names) {
+    if (error) throw error;
+    var globe = {type: "Sphere"},
+        land = topojson.feature(world, world.objects.land),
+        countries = topojson.feature(world, world.objects.countries).features,
+        borders = topojson.mesh(world, world.objects.countries, function(a, b) { return a !== b; });
+    countries = countries.filter(function(d) {
+      return names.some(function(n) {
+        if (d.id == n.id) return d.name = n.name;
+      });
+    }).sort(function(a, b) {
+      return a.name.localeCompare(b.name);
   });
 
-  (function transition() {
+  // Open a socket to website.
+  var socket = io({ "force new connection" : true });
+
+  // TODO - make this look better.
+  function makeHTML(tweet) {
+    return [
+      '<div class="user">',
+      '<a href="https://twitter.com/', tweet.user, '" target="_blank">', '@', tweet.user, '</a>',
+      '<h1>', tweet.placeName, '</h1>',
+      '<div class="tweet">',
+      '<a href="https://twitter.com/', tweet.user, '/status/', tweet.id, '" target="_blank">',
+      tweet.text, '</a>', '</div>'
+    ].join('');
+  }
+
+  socket.on( 'tweet', function(tweet) {
+    console.log('tweet');
     d3.transition()
         .duration(1250)
         .each("start", function() {
-          title.text(countries[i = (i + 1) % n].name);
-        })
-        .tween("rotate", function() {
-          var p = d3.geo.centroid(countries[i]),
-              r = d3.interpolate(projection.rotate(), [-p[0], -p[1]]);
-          return function(t) {
-            projection.rotate(r(t));
-            c.clearRect(0, 0, width, height);
-            c.fillStyle = "#ccc", c.beginPath(), path(land), c.fill();
-            c.fillStyle = "#f00", c.beginPath(), path(countries[i]), c.fill();
-            c.strokeStyle = "#fff", c.lineWidth = .5, c.beginPath(), path(borders), c.stroke();
-            c.strokeStyle = "#000", c.lineWidth = 2, c.beginPath(), path(globe), c.stroke();
-          };
-        })
-      .transition()
-        .each("end", transition);
-  })();
+       title.html(makeHTML(tweet));
+     })
+     .tween("rotate", function() {
+       var p = tweet.latLong,
+           r = d3.interpolate(projection.rotate(), [-p[0], -p[1]]);
+       return function(t) {
+         // Rotate globe so that immediate point is centered in the view.
+         projection.rotate(r(t));
+         // Erase canvas.
+         c.clearRect(0, 0, width, height);
+         // Fill in land in gray.
+         c.fillStyle = "#ccc", c.beginPath(), path(land), c.fill();
+         // Draw country borders in white.
+         c.strokeStyle = "#fff", c.lineWidth = .5, c.beginPath(), path(borders), c.stroke();
+         // Draw globe circumference in black.
+         c.strokeStyle = "#000", c.lineWidth = 2, c.beginPath(), path(globe), c.stroke();
+         // Draw a circle at canvas-coordinates of latlong.
+         var center = projection(p);
+         c.strokeStyle = "#000", c.fillStyle = "#f00", c.beginPath(), c.arc(center[0], center[1], 5, 0, 2 * Math.PI, false), c.lineWidth = 2, c.fill(), c.stroke();
+        };
+      });
+    });
 }
 
 d3.select(self.frameElement).style("height", height + "px");
